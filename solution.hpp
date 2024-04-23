@@ -10,42 +10,26 @@
 #include <iostream>
 #include <type_traits>
 
-#ifndef NEW_ENDL
-// #define NEW_ENDL 0
-#endif
-
 #define null INT32_MIN
 
 class Node {
 public:
     int val;
-    Node* left;
-    Node* right;
-    Node* next;
-
-    Node() : val(0), left(NULL), right(NULL), next(NULL) {}
-
-    Node(int _val) : val(_val), left(NULL), right(NULL), next(NULL) {}
-
-    Node(int _val, Node* _left, Node* _right, Node* _next)
-        : val(_val), left(_left), right(_right), next(_next) {}
+    Node(int v = 0) : val(v) {}
+    virtual ~Node() = default;
 };
 
-struct ListNode {
-    int val;
-    ListNode *next;
-    ListNode() : val(0), next(nullptr) {}
-    ListNode(int x) : val(x), next(nullptr) {}
-    ListNode(int x, ListNode *next) : val(x), next(next) {}
-    ~ListNode() {
-        delete next;
-        next = nullptr;
-    }
+struct ListNode : public Node {
+    using Node::val;
+    ListNode *next = nullptr;
+    ListNode(int v = 0, ListNode *n = nullptr) : Node(v), next(n) {}
+    virtual ~ListNode() = default;
+    void free() { delete next; next = nullptr; }
     friend struct ListAdapter;
 };
 
 struct ListAdapter {
-    ListNode* head;
+    ListNode* head = nullptr;
     ListAdapter() = default;
     ListAdapter(std::initializer_list<int> il);
     ~ListAdapter() {delete head; head = nullptr;}
@@ -55,15 +39,11 @@ private:
 };
 
 ListAdapter::ListAdapter(std::initializer_list<int> il) {
-    if (il.size() == 0) {
-        this->head = nullptr;
-        return;
-    }
-    auto &p = this->head;
+    this->head = nullptr;
+    auto *p = &(this->head);
     for (const auto &i : il) {
-        auto q = new ListNode(i);
-        p = q;
-        p = p->next;
+        *p = new ListNode(i);
+        p = &((*p)->next);
     }
 }
 
@@ -86,29 +66,24 @@ std::ostream& ListAdapter::print(std::ostream& os, const ListNode* ln) const {
 }
 
 struct TreeNode : public Node {
-    TreeNode* left;
-    TreeNode* right;
+    using Node::val;
+    TreeNode* left = nullptr;
+    TreeNode* right = nullptr;
 public:
-    TreeNode() : Node() {}
-    TreeNode(int x) : Node(x) {}
-    TreeNode(int x, TreeNode *left, TreeNode *right) : Node(x, left, right, nullptr) {}
-    ~TreeNode() {
-        delete left; delete right;
-        left = nullptr; right = nullptr;
-        delete next;
-        next = nullptr;
-    }
+    TreeNode(int v = 0, TreeNode *l = nullptr, TreeNode *r = nullptr) : Node(v), left(l), right(r) {}
+    virtual ~TreeNode() = default;
+    void free() { delete left; left = nullptr; delete right; right = nullptr; }
     friend struct TreeAdapter;
 };
 
 struct TreeAdapter {
-    Node *root;
+    TreeNode *root = nullptr;
     TreeAdapter() = default;
     TreeAdapter(std::initializer_list<int> il);
     ~TreeAdapter() {delete root; root = nullptr;}
     friend std::ostream& operator<<(std::ostream& os, const TreeAdapter& tr);
 private:
-    std::ostream& print(std::ostream& os, const Node* tn, unsigned k = 0) const;
+    std::ostream& print(std::ostream& os, const TreeNode* tn, unsigned k = 0) const;
     constexpr const static int nani = null;
 };
 
@@ -117,7 +92,7 @@ TreeAdapter::TreeAdapter(std::initializer_list<int> il) {
         this->root = nullptr;
         return;
     }
-    std::queue<Node**> qtn;
+    std::queue<TreeNode**> qtn;
     qtn.push(&(this->root));
     for (const auto &i : il) {
         if (qtn.empty()) return;
@@ -138,14 +113,14 @@ std::ostream& operator<<(std::ostream& os, const TreeAdapter& tr) {
     tr.print(os, tr.root);
     return os;
 }
-std::ostream& TreeAdapter::print(std::ostream& os, const Node* tn, unsigned k) const {
+std::ostream& TreeAdapter::print(std::ostream& os, const TreeNode* tn, unsigned k) const {
     if (tn == nullptr) return os;
     os << std::string(4*k, ' ') << '(' << tn->val << ")\n";
-    print(os, static_cast<TreeNode*>(tn->right), k+1);
+    print(os, tn->right, k+1);
     if ((tn->left == nullptr) ^ (tn->right == nullptr)) {
         os << std::string(4*(k+1), ' ') << "( )\n";
     }
-    print(os, static_cast<TreeNode*>(tn->left), k+1);
+    print(os, tn->left, k+1);
     return os;
 }
 
@@ -164,9 +139,6 @@ template<typename T> std::ostream& operator<<(std::ostream &os, const std::vecto
         }
     }
     os << ']';
-    #ifdef NEW_ENDL
-    os << std::endl;
-    #endif
     return os;
 }
 
